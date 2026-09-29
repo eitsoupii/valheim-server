@@ -134,3 +134,11 @@ Allow inbound UDP traffic on the configured port and the next two ports
 (`2456-2458/udp` by default) in both the VM firewall and the Azure network
 security group. Keep the server password private; the installer stores it in
 `/etc/valheim/server.conf`, readable only by root.
+
+## Start and stop automation
+
+The installer enables `valheim-server` as a systemd service, so the game server
+starts automatically when Ubuntu boots. Optional Azure Automation runbooks can
+deallocate the VM on a daily schedule and start it through an HTTPS webhook.
+See [`infra/README.md`](infra/README.md#start-and-stop-automation) for setup,
+webhook use, and cost details.
