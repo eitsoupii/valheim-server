@@ -2,12 +2,81 @@
 
 Install and run a Valheim dedicated server on an Ubuntu Azure VM.
 
+## Prerequisites
+
+For the automated deployment from Windows, have the following ready:
+
+- **Windows PowerShell 5.1 or later.** The deployment script is
+  `scripts/deploy-valheim-server.ps1`.
+- **Azure CLI**, installed and signed in to the subscription where you want to
+  create the server. Install it using the
+  [Azure CLI instructions](https://learn.microsoft.com/cli/azure/install-azure-cli-windows),
+  then run `az login`. Your account needs permission to create a resource group
+  and deploy virtual machines, networking, public IP addresses, and network
+  security groups in the subscription. Confirm the subscription with
+  `az account show`.
+- **OpenSSH client**, including both `ssh` and `scp`. On Windows, install the
+  OpenSSH Client optional feature if those commands are not already available.
+- **An SSH key pair** for logging in to the VM. The script defaults to
+  `~\.ssh\id_ed25519` and `~\.ssh\id_ed25519.pub`. Create one in PowerShell if
+  needed:
+
+  ```powershell
+  ssh-keygen -t ed25519
+  ```
+
+- **Your current public IPv4 address in CIDR notation**, to restrict SSH access
+  to your connection. A single address typically uses `/32`, for example
+  `203.0.113.10/32`. If your ISP changes your public IP, update the network
+  security group before connecting from the new address.
+- **An available Azure region and VM quota.** The default VM size is
+  `Standard_B2s`; availability and quota depend on your subscription and region.
+
+The deployment script installs and configures the server on the remote Ubuntu
+VM. You do not need SteamCMD, Linux, or Valheim installed on your Windows
+machine. The VM needs outbound internet access to download Ubuntu packages and
+the dedicated server files.
+
 ## Azure infrastructure
 
 The Bicep template in [`infra/main.bicep`](infra/main.bicep) deploys an Ubuntu VM
 with a static public IP, a virtual network, and network rules for SSH and Valheim
 game traffic. See [`infra/README.md`](infra/README.md) for prerequisites and
 deployment instructions.
+
+### Deploy infrastructure and server from PowerShell
+
+For a complete deployment from your local Windows machine, use
+[`scripts/deploy-valheim-server.ps1`](scripts/deploy-valheim-server.ps1). It
+creates the resource group if necessary, deploys the Bicep template, waits for
+SSH to become available, and runs the server installer on the VM.
+
+Install and sign in to the [Azure CLI](https://learn.microsoft.com/cli/azure/)
+and ensure OpenSSH (`ssh` and `scp`) is available. Then run from the repository
+root:
+
+```powershell
+az login
+.\scripts\deploy-valheim-server.ps1 `
+  -ResourceGroupName valheim-server-rg `
+  -Location eastus `
+  -SshSourceAddressPrefix "203.0.113.10/32"
+```
+
+Replace the example CIDR with the public source address range your ISP assigns
+to your connection. A single current public IP is commonly entered as `/32`;
+use a wider CIDR only if you specifically want to permit that whole range.
+SSH is restricted to this CIDR in the Azure network security group. If your
+public IP changes, update the `sshSourceAddressPrefix` parameter by redeploying
+the Bicep template before connecting from the new address.
+
+The script uses `~\.ssh\id_ed25519.pub` and its matching private key by default;
+override `-SshPublicKeyPath` and `-SshPrivateKeyPath` if your SSH key is elsewhere.
+It prompts for the Valheim server password without echoing it, sends it to the
+VM over the SSH input stream, and does not put it in the Azure deployment or
+remote command arguments. Server name, world, public listing, and crossplay can
+be set with `-ServerName`, `-WorldName`, `-Public`, and `-Crossplay`. Use
+`-WhatIf` to skip all Azure resource creation and server installation.
 
 ## Install
 
